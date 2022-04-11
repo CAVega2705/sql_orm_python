@@ -16,6 +16,9 @@ __email__ = "alumnos@inove.com.ar"
 __version__ = "1.1"
 
 import sqlite3
+from unicodedata import name
+from flask import session
+from numpy import insert
 
 import sqlalchemy
 from sqlalchemy import Column, Integer, String, ForeignKey
@@ -58,6 +61,32 @@ def create_schema():
     # Crear las tablas
     base.metadata.create_all(engine)
 
+def insert_tutor(name):
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    tutor = Tutor(name=name)
+    session.add(tutor)
+    session.commit()
+    print(tutor)
+
+def insert_estudiante(name, age, grade, tutor):
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    query = session.query(Tutor).filter(Tutor.name == tutor)
+    tutor_ok = query.first()
+
+    if tutor_ok is None:
+        print(f'No se puede añadir al estudiante {name} porque su tutor {tutor} no está en la base de datos.')
+        return
+
+    estudiante = Estudiante(name=name, age=age, grade=grade, tutor=tutor_ok)
+
+    session.add(estudiante)
+    session.commit()
+    print(estudiante)
+
 
 def fill():
     print('Completemos esta tablita!')
@@ -66,6 +95,9 @@ def fill():
     # id --> este campo es auto incremental por lo que no deberá completarlo
     # name --> El nombre del tutor (puede ser solo nombre sin apellido)
 
+    insert_tutor('Pedro')
+    insert_tutor('Cristian')
+
     # Llenar la tabla de la secundaria con al menos 5 estudiantes
     # Cada estudiante tiene los posibles campos:
     # id --> este campo es auto incremental por lo que no deberá completarlo
@@ -73,6 +105,16 @@ def fill():
     # age --> cuantos años tiene el estudiante
     # grade --> en que año de la secundaria se encuentra (1-6)
     # tutor --> el tutor de ese estudiante (el objeto creado antes)
+
+    insert_estudiante('Juan', 15, 5, 'Pedro')
+    insert_estudiante('Ramon', 15, 2, 'Cristian')    
+    insert_estudiante('Pablo', 15, 4, 'Pedro')
+    insert_estudiante('Juana', 15, 6, 'Pedro')
+    insert_estudiante('Julieta', 15, 1, 'Cristian')
+    insert_estudiante('Florencia', 15, 2, 'Cristian')
+    insert_estudiante('Matias', 15, 3, 'Pedro')
+
+
 
     # No olvidarse que antes de poder crear un estudiante debe haberse
     # primero creado el tutor.
@@ -85,6 +127,12 @@ def fetch():
     # Imprimir en pantalla cada objeto que traiga la query
     # Realizar un bucle para imprimir de una fila a la vez
 
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    query = session.query(Estudiante)
+    for estudiante in query:
+        print(estudiante)
 
 def search_by_tutor(tutor):
     print('Operación búsqueda!')
@@ -96,6 +144,12 @@ def search_by_tutor(tutor):
     # deberá crear la query para la tabla estudiante pero
     # buscar por la propiedad de tutor.name
 
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    query = session.query(Estudiante).join(Estudiante.tutor).filter(Tutor.name == tutor)
+    print(f'El tutor {tutor} está a cargo de los siguientes estudiantes:')
+    print(Estudiante.name)
 
 def modify(id, name):
     print('Modificando la tabla')
@@ -110,6 +164,19 @@ def modify(id, name):
     # TIP: En clase se hizo lo mismo para las nacionalidades con
     # en la función update_persona_nationality
 
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    
+    query = session.query(Tutor).filter(Tutor.name == name)
+    tutor = query.first()
+
+    query = session.query(Estudiante).filter(Estudiante.id == id)
+    estudiante = query.first()
+
+    estudiante.tutor = tutor
+    session.add(estudiante)
+    session.commit()
+    print(f'El tutor {name} ahora tiene a su cargo al estudiante {estudiante.name}')
 
 def count_grade(grade):
     print('Estudiante por grado')
@@ -120,19 +187,26 @@ def count_grade(grade):
     # TIP: En clase se hizo lo mismo para las nacionalidades con
     # en la función count_persona
 
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    result = session.query(Estudiante).filter(Estudiante.grade == grade).count()
+    print(f'{result} estudiantes se encuentran estudiando en el grado {grade}')
+
 
 if __name__ == '__main__':
     print("Bienvenidos a otra clase de Inove con Python")
     create_schema()   # create and reset database (DB)
-    # fill()
-    # fetch()
 
-    tutor = 'nombre_tutor'
-    # search_by_tutor(tutor)
+    fill()
+    fetch
 
-    nuevo_tutor = 'nombre_tutor'
+    tutor = 'Pedro'
+    search_by_tutor(tutor)
+
+    nuevo_tutor = 'Esteban'
     id = 2
-    # modify(id, nuevo_tutor)
+    modify(id, nuevo_tutor)
 
     grade = 2
-    # count_grade(grade)
+    count_grade(grade)
